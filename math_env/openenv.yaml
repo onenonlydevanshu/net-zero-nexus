@@ -1,0 +1,4 @@
+spec_version: 1
+name: net_zero_nexus
+env_id: net_zero_nexus_v1
+entrypoint: server:NetZeroEnv
