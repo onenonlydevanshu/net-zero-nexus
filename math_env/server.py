@@ -1,8 +1,4 @@
 from openenv_core import Environment
-try:
-    from openenv_core import StepResult
-except ImportError:
-    from openenv.core.client_types import StepResult
 from openenv.core.env_server.types import State
 from models import NetZeroAction, NetZeroObservation
 from openai import OpenAI
@@ -86,7 +82,7 @@ class NetZeroEnv(Environment):
         )
         return self._current_observation("Plant reset. Choose an operating mode.")
 
-    def step(self, action: NetZeroAction) -> StepResult:
+    def step(self, action: NetZeroAction) -> NetZeroObservation:
         selected = action.action
         base_capture_kg = 0.0
         energy_used_kw = 0.0
@@ -128,11 +124,10 @@ class NetZeroEnv(Environment):
                     "reason": "invalid_action",
                 },
             )
-            return StepResult(
-                observation=self._current_observation("Invalid action. Use 0, 1, or 2."),
-                reward=-10.0,
-                done=True,
-            )
+            obs = self._current_observation("Invalid action. Use 0, 1, or 2.")
+            obs.reward = -10.0
+            obs.done = True
+            return obs
 
         efficiency = self._capture_efficiency()
         captured_kg = base_capture_kg * efficiency
@@ -179,11 +174,10 @@ class NetZeroEnv(Environment):
                 },
             )
 
-        return StepResult(
-            observation=self._current_observation(message),
-            reward=reward,
-            done=done,
-        )
+        obs = self._current_observation(message)
+        obs.reward = reward
+        obs.done = done
+        return obs
 
     @property
     def state(self) -> State:
