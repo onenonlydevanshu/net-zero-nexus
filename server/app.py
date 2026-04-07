@@ -5,9 +5,9 @@
 # LICENSE file in the root directory of this source tree.
 
 """
-FastAPI application for the Math Env Environment.
+FastAPI application for the Net-Zero Nexus environment.
 
-This module creates an HTTP server that exposes the MathEnvironment
+This module creates an HTTP server that exposes NetZeroEnv
 over HTTP and WebSocket endpoints, compatible with EnvClient.
 
 Endpoints:
@@ -36,49 +36,43 @@ except Exception as e:  # pragma: no cover
     ) from e
 
 try:
-    from ..models import GuessAction, GuessObservation
-    from .math_env_environment import GuessingEnv
-except ModuleNotFoundError:
-    from models import GuessAction, GuessObservation
-    from server.math_env_environment import GuessingEnv
+    from ..models import NetZeroAction, NetZeroObservation
+    from .net_zero_env import NetZeroEnv
+except (ModuleNotFoundError, ImportError):
+    from models import NetZeroAction, NetZeroObservation
+    from server.net_zero_env import NetZeroEnv
 
 
 # Create the app with web interface and README integration
 app = create_app(
-    GuessingEnv,
-    GuessAction,
-    GuessObservation,
-    env_name="math_env",
+    NetZeroEnv,
+    NetZeroAction,
+    NetZeroObservation,
+    env_name="net_zero_nexus",
     max_concurrent_envs=1,  # increase this number to allow more concurrent WebSocket sessions
 )
 
 
-def main(host: str = "0.0.0.0", port: int = 8000):
+def main() -> None:
     """
     Entry point for direct execution via uv run or python -m.
 
     This function enables running the server without Docker:
         uv run --project . server
         uv run --project . server --port 8001
-        python -m math_env.server.app
-
-    Args:
-        host: Host address to bind to (default: "0.0.0.0")
-        port: Port number to listen on (default: 8000)
+        python -m server.app
 
     For production deployments, consider using uvicorn directly with
     multiple workers:
-        uvicorn math_env.server.app:app --workers 4
+        uvicorn server.app:app --workers 4
     """
+    import os
     import uvicorn
 
+    host = os.getenv("HOST", "0.0.0.0")
+    port = int(os.getenv("PORT", "8000"))
     uvicorn.run(app, host=host, port=port)
 
 
 if __name__ == "__main__":
-    import argparse
-
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--port", type=int, default=8000)
-    args = parser.parse_args()
-    main(port=args.port)
+    main()

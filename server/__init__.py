@@ -1,1 +1,1 @@
-from .server import NetZeroEnv
+from .net_zero_env import NetZeroEnv
