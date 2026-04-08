@@ -82,9 +82,21 @@ def log_event(tag: str, payload: dict) -> None:
 
 
 def main() -> None:
-    api_base_url = os.getenv("API_BASE_URL", "http://localhost:8000")
-    api_key = os.getenv("API_KEY", "test-key")
-    model_name = os.getenv("MODEL_NAME", "meta-llama/Llama-3.3-70B-Instruct")
+    api_base_url = os.environ.get("API_BASE_URL")
+    api_key = os.environ.get("API_KEY")
+    model_name = os.environ.get("MODEL_NAME", "gpt-4o")
+
+    # Validator MUST inject these - if missing, fail fast
+    if not api_base_url or not api_key:
+        log_event(
+            "ERROR",
+            {
+                "error": "API_BASE_URL and API_KEY must be provided via environment variables",
+                "api_base_url_set": api_base_url is not None,
+                "api_key_set": api_key is not None,
+            },
+        )
+        raise ValueError("Missing required environment variables: API_BASE_URL, API_KEY")
 
     log_event(
         "START",
