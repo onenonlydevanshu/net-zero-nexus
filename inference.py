@@ -6,7 +6,7 @@ from models import NetZeroAction
 from server import NetZeroEnv
 
 
-def get_llm_action(llm_client: OpenAI, obs, step_idx: int) -> int:
+def get_llm_action(llm_client: OpenAI, obs, step_idx: int, model_name: str) -> int:
     """Query LLM for action recommendation via injected API_BASE_URL."""
     try:
         prompt = (
@@ -16,7 +16,7 @@ def get_llm_action(llm_client: OpenAI, obs, step_idx: int) -> int:
             f"Return exactly one digit (0=idle, 1=eco, 2=blast, 3=purge)."
         )
         response = llm_client.chat.completions.create(
-            model="gpt-3.5-turbo",
+            model=model_name,
             messages=[{"role": "user", "content": prompt}],
             max_tokens=10,
             temperature=0.1,
@@ -111,7 +111,7 @@ def main() -> None:
 
         for step_idx in range(24):
             # Try LLM action first, fall back to heuristic if it fails
-            action_id = get_llm_action(llm_client, obs, step_idx)
+            action_id = get_llm_action(llm_client, obs, step_idx, model_name)
             if action_id is None:
                 action_id = choose_action(obs)
             obs = env.step(NetZeroAction(action=action_id))
