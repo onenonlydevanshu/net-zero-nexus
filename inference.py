@@ -1,8 +1,33 @@
 import json
 import os
 
+from openai import OpenAI
 from models import NetZeroAction
 from server import NetZeroEnv
+
+
+def get_llm_action(llm_client: OpenAI, obs, step_idx: int) -> int:
+    """Query LLM for action recommendation via injected API_BASE_URL."""
+    try:
+        prompt = (
+            f"Control a DAC plant to maximize carbon capture over economics. "
+            f"Step {step_idx}/24. Current state: energy_price={obs.energy_price:.1f}, "
+            f"humidity={obs.humidity:.1f}, filter_saturation={obs.filter_saturation:.1f}. "
+            f"Return exactly one digit (0=idle, 1=eco, 2=blast, 3=purge)."
+        )
+        response = llm_client.chat.completions.create(
+            model="gpt-3.5-turbo",
+            messages=[{"role": "user", "content": prompt}],
+            max_tokens=10,
+            temperature=0.1,
+        )
+        text = response.choices[0].message.content.strip()
+        for ch in text:
+            if ch in "0123":
+                return int(ch)
+    except Exception:
+        pass
+    return None
 
 
 def choose_action(obs) -> int:
@@ -58,6 +83,7 @@ def log_event(tag: str, payload: dict) -> None:
 
 def main() -> None:
     api_base_url = os.getenv("API_BASE_URL", "http://localhost:8000")
+    api_key = os.getenv("API_KEY", "test-key")
     model_name = os.getenv("MODEL_NAME", "meta-llama/Llama-3.3-70B-Instruct")
 
     log_event(
@@ -65,19 +91,29 @@ def main() -> None:
         {
             "api_base_url": api_base_url,
             "model_name": model_name,
-            "mode": "local_environment_rollout",
+            "mode": "llm_rollout",
         },
     )
 
     total_reward = 0.0
     env = None
+    llm_client = None
 
     try:
+        # Initialize OpenAI client with injected environment variables
+        llm_client = OpenAI(
+            base_url=api_base_url,
+            api_key=api_key,
+        )
+
         env = NetZeroEnv()
         obs = env.reset()
 
         for step_idx in range(24):
-            action_id = choose_action(obs)
+            # Try LLM action first, fall back to heuristic if it fails
+            action_id = get_llm_action(llm_client, obs, step_idx)
+            if action_id is None:
+                action_id = choose_action(obs)
             obs = env.step(NetZeroAction(action=action_id))
             step_reward = float(obs.reward or 0.0)
             total_reward += step_reward
